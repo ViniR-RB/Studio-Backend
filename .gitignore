@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+backend/.venv/
+ui/node_modules/
+ui/.angular/
+ui/dist/
+
+.DS_Store

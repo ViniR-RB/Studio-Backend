@@ -1,0 +1,89 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-session}
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-604800}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:4200}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      n8n:
+        condition: service_started
+
+  n8n:
+    image: n8nio/n8n:1.107.3
+    ports:
+      - "5678:5678"
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      N8N_RUNNERS_ENABLED: "true"
+      OD_API_TOKEN: ${OD_API_TOKEN}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  open-design:
+    build:
+      context: .
+      dockerfile: Dockerfile.open-design
+      args:
+        OPEN_DESIGN_IMAGE: ${OPEN_DESIGN_IMAGE:-ghcr.io/nexu-io/od:latest}
+    environment:
+      OD_BIND_HOST: 0.0.0.0
+      OD_PORT: 7456
+      OD_API_TOKEN: ${OD_API_TOKEN}
+      CODEX_HOME: ${CODEX_HOME:-/app/.codex}
+    volumes:
+      - open_design_data:/app/.od
+      - codex_data:/app/.codex
+      - open_design_home:/home/open-design
+    ports:
+      - "127.0.0.1:1455:1455"
+      - "127.0.0.1:1457:1457"
+    expose:
+      - "7456"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:7456/api/health').then(r => { if (!r.ok) process.exit(1) })"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  postgres_data:
+  n8n_data:
+  open_design_data:
+  codex_data:
+  open_design_home:
