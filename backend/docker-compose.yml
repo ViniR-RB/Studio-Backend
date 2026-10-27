@@ -61,11 +61,15 @@ services:
       dockerfile: Dockerfile.open-design
       args:
         OPEN_DESIGN_IMAGE: ${OPEN_DESIGN_IMAGE:-ghcr.io/nexu-io/od:latest}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       OD_BIND_HOST: 0.0.0.0
       OD_PORT: 7456
       OD_API_TOKEN: ${OD_API_TOKEN}
       CODEX_HOME: ${CODEX_HOME:-/app/.codex}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-http://host.docker.internal:20128/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     volumes:
       - open_design_data:/app/.od
       - codex_data:/app/.codex
