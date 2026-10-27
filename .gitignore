@@ -9,5 +9,8 @@ backend/.venv/
 ui/node_modules/
 ui/.angular/
 ui/dist/
+studio/node_modules/
+studio/.angular/
+studio/dist/
 
 .DS_Store
