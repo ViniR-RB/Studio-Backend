@@ -2,7 +2,7 @@
 
 ## Scope
 
-`ui/` is a standalone Angular 20 application. Keep the frontend minimal and aligned to the FastAPI contract in `../app/schemas.py` and `../app/main.py`.
+`studio/` is a standalone Angular 20 application. Keep the frontend minimal and aligned to the FastAPI contract in `../app/schemas.py` and `../app/main.py`.
 
 ## Layer rules
 
@@ -11,8 +11,8 @@
 - `core/repositories`: endpoint consumption and API-to-domain mapping only.
 - `features`: feature forms and orchestration; use typed Reactive Forms.
 - `pages`: route-level composition only.
-- `ui/atoms`: small reusable controls (button, chip, modal).
-- `ui/molecules`: composed controls (sidebar, form sections).
+- `studio/src/app/studio/atoms`: small reusable controls (button, chip, modal).
+- `src/app/ui/molecules`: composed controls (sidebar, form sections).
 
 ## Authentication
 
@@ -20,7 +20,7 @@ Use server sessions in `HttpOnly`, `Secure`, `SameSite` cookies. The browser own
 
 ## Commands
 
-From `ui/`: `npm start`, `npm run build`, `npm test`.
+From `studio/`: `npm start`, `npm run build`, `npm test`.
 
 ## Design constraints
 
