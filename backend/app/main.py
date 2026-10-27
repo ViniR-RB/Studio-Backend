@@ -29,7 +29,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="Landing Page Generator", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_origin],
+    allow_origins=[origin.strip() for origin in settings.frontend_origins.split(",") if origin.strip()],
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "X-XSRF-TOKEN", "Idempotency-Key"],
@@ -64,7 +64,7 @@ async def login(request: LoginRequest, response: Response, session: AsyncSession
     session_id = secrets.token_urlsafe(48)
     session.add(Session(id=session_id, user_id=user.id, expires_at=datetime.now(timezone.utc) + timedelta(seconds=settings.session_ttl_seconds)))
     await session.commit()
-    response.set_cookie(settings.session_cookie_name, session_id, max_age=settings.session_ttl_seconds, httponly=True, secure=settings.cookie_secure, samesite="lax")
+    response.set_cookie(settings.session_cookie_name, session_id, max_age=settings.session_ttl_seconds, httponly=True, secure=settings.cookie_secure, samesite=settings.cookie_samesite)
     return CurrentUser(id=user.id, email=user.email)
 
 
@@ -80,7 +80,7 @@ async def logout(response: Response, session_id: str | None = Cookie(default=Non
         if auth_session:
             await session.delete(auth_session)
             await session.commit()
-    response.delete_cookie(settings.session_cookie_name, httponly=True, secure=settings.cookie_secure, samesite="lax")
+    response.delete_cookie(settings.session_cookie_name, httponly=True, secure=settings.cookie_secure, samesite=settings.cookie_samesite)
 
 
 async def require_internal_token(authorization: str | None = Header(default=None)) -> None:
