@@ -2,14 +2,13 @@ ARG OPEN_DESIGN_IMAGE=ghcr.io/nexu-io/od:latest
 FROM ${OPEN_DESIGN_IMAGE}
 
 USER root
-RUN npm install --global @openai/codex
+RUN npm install --global opencode-ai@1.19.5
 USER open-design
 
 WORKDIR /app
 COPY start-open-design.sh /usr/local/bin/start-open-design
 USER root
-RUN apk add --no-cache su-exec \
-    && chmod +x /usr/local/bin/start-open-design
+RUN chmod +x /usr/local/bin/start-open-design
 ENV PATH="/app/apps/daemon/bin:${PATH}"
 
 ENTRYPOINT ["/sbin/tini", "--"]

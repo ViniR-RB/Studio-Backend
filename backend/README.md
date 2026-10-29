@@ -1,6 +1,6 @@
 # Dropshipping landing-page generator
 
-MVP com FastAPI, PostgreSQL, n8n e OpenDesign em containers. O OpenDesign usa uma imagem derivada que instala a CLI oficial do Codex (`@openai/codex`). O fluxo recebe um produto, gera HTML no OpenDesign/Codex, salva a versão na API e entrega a versão publicada por slug.
+MVP com FastAPI, PostgreSQL, n8n e OpenDesign em containers. O OpenDesign usa uma imagem derivada que instala a CLI do OpenCode e o modelo gratuito `opencode/mimo-v2.6-flash-free`. O fluxo recebe um produto, gera HTML no OpenDesign/OpenCode, salva a versão na API e entrega a versão publicada por slug.
 
 ## Executar
 
@@ -10,7 +10,7 @@ docker compose -f docker-compose.yml config
 docker compose -f docker-compose.yml up --build
 ```
 
-A API fica em `http://localhost:8000`. Durante o login interativo do Codex, as portas locais `1455` e `1457` são encaminhadas para o callback OAuth temporário. O n8n é interno no Compose; importe `n8n/workflows/landing-page-generation.json` depois de iniciar o stack. A imagem `backend/Dockerfile.open-design` instala a CLI com `npm install --global @openai/codex`; o Codex usa o login ChatGPT/device-auth persistido em `CODEX_HOME`, sem `OPENAI_API_KEY`. O Codex deve ser chamado em modo não interativo (`codex exec --json` ou equivalente) pelo runtime do OpenDesign. Ajuste o endpoint de geração conforme a versão pinada, pois `/api/chat` é streaming/SSE e o formato do artifact precisa ser confirmado antes de produção.
+A API fica em `http://localhost:8000`. O n8n é interno no Compose; importe `n8n/workflows/landing-page-generation.json` depois de iniciar o stack. A imagem `backend/Dockerfile.open-design` instala a CLI do OpenCode e registra automaticamente o MCP do OpenDesign com `od mcp install opencode`. O modelo padrão fica em `OPENCODE_MODEL` e usa o catálogo gratuito do OpenCode; confirme a disponibilidade no momento da execução, pois os modelos gratuitos podem mudar.
 
 ## Segurança
 
