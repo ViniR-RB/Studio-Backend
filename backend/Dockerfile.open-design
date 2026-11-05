@@ -2,7 +2,7 @@ ARG OPEN_DESIGN_IMAGE=ghcr.io/nexu-io/od:latest
 FROM ${OPEN_DESIGN_IMAGE}
 
 USER root
-RUN npm install --global opencode-ai@1.19.5
+RUN npm install --global @openai/codex@latest
 USER open-design
 
 WORKDIR /app

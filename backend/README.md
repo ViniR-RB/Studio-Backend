@@ -1,6 +1,6 @@
 # Dropshipping landing-page generator
 
-MVP com FastAPI, PostgreSQL, n8n e OpenDesign em containers. O fluxo recebe um produto, gera HTML no OpenDesign/OpenCode, salva a versão na API e entrega a versão publicada por slug.
+MVP com FastAPI, PostgreSQL, n8n e OpenDesign em containers. O fluxo recebe um produto, executa o Codex CLI com o MCP do OpenDesign, salva a versão na API e entrega a versão publicada por slug.
 
 ## Executar
 
@@ -34,9 +34,10 @@ As variáveis ficam no arquivo `.env` na raiz do repositório. Comece copiando `
 | `DATABASE_URL` | Sim | URL assíncrona usada pela API para conectar ao banco. | `postgresql+asyncpg://dropshipping:change-me@postgres:5432/dropshipping` |
 | `INTERNAL_API_TOKEN` | Sim | Token Bearer usado para proteger os endpoints internos da API. | `change-me` |
 | `N8N_WEBHOOK_URL` | Sim | Webhook do n8n chamado pela API para iniciar uma geração. | `http://n8n:5678/webhook/landing-page-generation` |
-| `OPENCODE_MODEL` | Não | Modelo usado pelo OpenCode. O Compose fornece um padrão gratuito. | `opencode/nemotron-v3.5-lightning-free` |
+| `CODEX_MODEL` | Não | Modelo usado pelo Codex CLI. O padrão local é `gpt-5-codex`. | `gpt-5-codex` |
 | `OPEN_DESIGN_IMAGE` | Não | Imagem Docker do OpenDesign. | `ghcr.io/nexu-io/od:latest` |
 | `OD_API_TOKEN` | Sim | Senha da autenticação básica do OpenDesign e token de integração com o n8n. | `change-me` |
+| `CODEX_AUTH_READY` | Sim | Libera gerações após o login persistido do Codex no volume `codex_home`. Use `false` até autenticar o Codex. | `false` |
 | `N8N_ENCRYPTION_KEY` | Sim | Chave usada pelo n8n para criptografar credenciais e dados sensíveis. | `change-me` |
 | `SESSION_COOKIE_NAME` | Não | Nome do cookie de sessão da API. | `session` |
 | `SESSION_TTL_SECONDS` | Não | Tempo de vida da sessão em segundos. | `604800` |
@@ -62,6 +63,8 @@ Depois de iniciar os serviços, importe o workflow em `../n8n/workflows/landing-
 - `GET /api/v1/auth/me` retorna o usuário da sessão atual.
 - `POST /api/v1/generations` inicia uma geração e retorna `202` com `job_id`.
 - `GET /api/v1/generations/{job_id}` consulta o status.
+- A API só aceita uma nova geração quando o Codex está habilitado e autenticado no ambiente local; o Codex CLI usa a sessão persistida, sem API key no app.
+- O Codex CLI carrega o MCP local do OpenDesign pelo arquivo `$CODEX_HOME/config.toml`.
 - n8n envia `POST /api/v1/internal/generations/{job_id}/result` com `html` e `slug`.
 - `GET /api/v1/pages/{slug}` entrega somente HTML publicado.
 

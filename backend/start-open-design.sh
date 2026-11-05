@@ -1,5 +1,7 @@
 #!/bin/sh
 set -eu
+export HOME=/home/open-design
+export CODEX_HOME=/home/open-design/.codex
 
 node /app/apps/daemon/dist/cli.js --no-open &
 daemon_pid=$!
@@ -12,6 +14,20 @@ for _ in $(seq 1 60); do
     sleep 1
 done
 
-node /app/apps/daemon/bin/od.mjs mcp install opencode --daemon-url http://127.0.0.1:7456
-node -e "const fs=require('fs'); const path=require('path'); const file=path.join(process.env.HOME, '.config/opencode/opencode.json'); let config={}; try { config=JSON.parse(fs.readFileSync(file, 'utf8')); } catch {} config.model=process.env.OPENCODE_MODEL || 'opencode/nemotron-3.5-lightning-free'; config.mcp=config.mcp || {}; config.mcp['open-design']={type:'local',command:['/usr/local/bin/node','/app/apps/daemon/dist/cli.js','mcp','--daemon-url','http://127.0.0.1:7456'],enabled:true,environment:{OD_DATA_DIR:'/app/.od'}}; fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(config, null, 2) + '\\n');"
+mkdir -p "$CODEX_HOME"
+model=${CODEX_MODEL:-gpt-5.6-luna}
+cat > "$CODEX_HOME/config.toml" <<EOF
+model = "$model"
+cli_auth_credentials_store = "file"
+
+[mcp_servers.open_design]
+command = "/usr/local/bin/node"
+args = ["/app/apps/daemon/dist/cli.js", "mcp", "--daemon-url", "http://127.0.0.1:7456"]
+EOF
+
+if command -v codex >/dev/null 2>&1; then
+    codex mcp remove open_design >/dev/null 2>&1 || true
+    codex mcp add open_design -- /usr/local/bin/node /app/apps/daemon/dist/cli.js mcp --daemon-url http://127.0.0.1:7456 >/dev/null
+fi
+
 wait "$daemon_pid"

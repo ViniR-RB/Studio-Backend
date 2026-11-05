@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class LoginRequest(BaseModel):
@@ -29,6 +29,23 @@ class SkillCreate(BaseModel):
     category: str = Field(default="design", max_length=80)
 
 
+class DesignSystemSummary(BaseModel):
+    id: UUID
+    slug: str
+    name: str
+    description: str
+    category: str
+    tokens: dict[str, object] = Field(default_factory=dict)
+
+
+class DesignSystemCreate(BaseModel):
+    slug: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", max_length=120)
+    name: str = Field(min_length=2, max_length=160)
+    description: str = Field(min_length=2, max_length=1000)
+    prompt: str = Field(min_length=2, max_length=5000)
+    category: str = Field(default="web", max_length=80)
+
+
 class GenerationRequest(BaseModel):
     product_name: str = Field(min_length=2, max_length=160)
     product_description: str = Field(min_length=10, max_length=5000)
@@ -43,7 +60,15 @@ class GenerationRequest(BaseModel):
     visual_direction: str | None = Field(default=None, max_length=3000)
     reference_urls: list[str] = Field(default_factory=list, max_length=5)
     image_urls: list[str] = Field(default_factory=list, max_length=10)
-    skill_slugs: list[str] = Field(default_factory=list, max_length=5)
+    skill_slugs: list[str] = Field(default_factory=list)
+    design_system_slug: str | None = Field(default=None, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", max_length=120)
+
+    @field_validator("reference_urls", "image_urls", "skill_slugs", mode="before")
+    @classmethod
+    def split_lines(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [item.strip() for item in value.splitlines() if item.strip()]
+        return value
 
 
 class GenerationAccepted(BaseModel):
@@ -120,6 +145,7 @@ class BriefingResponse(BaseModel):
     reference_urls: list[str] = Field(default_factory=list)
     image_urls: list[str] = Field(default_factory=list)
     skill_slugs: list[str] = Field(default_factory=list)
+    design_system_slug: str | None = None
 
 
 class BriefingUpdate(BaseModel):
@@ -131,6 +157,7 @@ class BriefingUpdate(BaseModel):
     cta: str | None = Field(default=None, max_length=240)
     tone: str = Field(default="clear and persuasive", max_length=120)
     visual_direction: str | None = Field(default=None, max_length=3000)
-    reference_urls: list[str] = Field(default_factory=list, max_length=5)
-    image_urls: list[str] = Field(default_factory=list, max_length=10)
-    skill_slugs: list[str] = Field(default_factory=list, max_length=5)
+    reference_urls: list[str] | None = Field(default=None, max_length=5)
+    image_urls: list[str] | None = Field(default=None, max_length=10)
+    skill_slugs: list[str] | None = Field(default=None, max_length=5)
+    design_system_slug: str | None = None
