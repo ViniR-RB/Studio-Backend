@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     database_url: str
     internal_api_token: str
     n8n_webhook_url: str
+    codex_enabled: bool = True
+    codex_model: str = "gpt-5.6-luna"
     session_cookie_name: str = "session"
     session_ttl_seconds: int = 60 * 60 * 24 * 7
     frontend_origins: str = "http://localhost:4200"

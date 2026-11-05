@@ -19,11 +19,16 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
       N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL}
+      CODEX_ENABLED: ${CODEX_ENABLED:-true}
+      CODEX_AUTH_READY: ${CODEX_AUTH_READY:-false}
+      CODEX_MODEL: ${CODEX_MODEL:-gpt-5.6-luna}
       SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-session}
       SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-604800}
       FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:4200}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}
+    volumes:
+      - assets_data:/app/assets
     ports:
       - "8000:8000"
     depends_on:
@@ -50,7 +55,7 @@ services:
       OD_API_TOKEN: ${OD_API_TOKEN}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
       N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
-      OPENCODE_MODEL: ${OPENCODE_MODEL:-opencode/nemotron-3.5-lightning-free}
+      CODEX_MODEL: ${CODEX_MODEL:-gpt-5.6-luna}
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:
@@ -67,12 +72,17 @@ services:
       OD_BIND_HOST: 0.0.0.0
       OD_PORT: 7456
       OD_API_TOKEN: ${OD_API_TOKEN}
-      OPENCODE_MODEL: ${OPENCODE_MODEL:-opencode/mimo-v2.6-flash-free}
+      CODEX_MODEL: ${CODEX_MODEL:-gpt-5.6-luna}
+      CODEX_AUTH_READY: ${CODEX_AUTH_READY:-false}
     volumes:
       - open_design_data:/app/.od
       - open_design_home:/home/open-design
+      - codex_home:/home/open-design/.codex
     ports:
       - "7456:7456"
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:7456/api/health').then(r => { if (!r.ok) process.exit(1) })"]
       interval: 30s
@@ -82,6 +92,8 @@ services:
 
 volumes:
   postgres_data:
+  assets_data:
   n8n_data:
   open_design_data:
   open_design_home:
+  codex_home:
