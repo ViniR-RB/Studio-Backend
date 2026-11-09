@@ -118,7 +118,7 @@ class LandingPageVersion(Base):
     validation_warnings: Mapped[str | None] = mapped_column(Text, nullable=True)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     page: Mapped[LandingPage] = relationship(back_populates="versions")
-    feedback: Mapped[list["PageFeedback"]] = relationship(back_populates="version")
+    feedback: Mapped[list["PageFeedback"]] = relationship(back_populates="version", cascade="all, delete-orphan")
 
 
 class PageFeedback(Base):

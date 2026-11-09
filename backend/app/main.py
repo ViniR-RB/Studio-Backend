@@ -15,7 +15,7 @@ from fastapi import Cookie, Depends, FastAPI, File, Header, HTTPException, Reque
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
-from sqlalchemy import exists, or_, select, text
+from sqlalchemy import exists, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -479,7 +479,14 @@ async def delete_page(slug: str, user: User = Depends(current_user), session: As
     product = job.product
     await session.delete(page)
     await session.delete(job)
-    await session.delete(product)
+    sibling_jobs = await session.scalar(
+        select(func.count(GenerationJob.id)).where(
+            GenerationJob.product_id == product.id,
+            GenerationJob.id != job.id,
+        )
+    )
+    if not sibling_jobs:
+        await session.delete(product)
     await session.commit()
 
 
