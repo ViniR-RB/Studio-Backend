@@ -90,6 +90,7 @@ class GenerationJob(Base):
     idempotency_key: Mapped[str | None] = mapped_column(String(200), unique=True)
     error_message: Mapped[str | None] = mapped_column(Text)
     skill_prompts: Mapped[str | None] = mapped_column(Text, nullable=True)
+    skill_slugs: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     product: Mapped[Product] = relationship(back_populates="jobs")

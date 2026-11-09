@@ -159,5 +159,5 @@ class BriefingUpdate(BaseModel):
     visual_direction: str | None = Field(default=None, max_length=3000)
     reference_urls: list[str] | None = Field(default=None, max_length=5)
     image_urls: list[str] | None = Field(default=None, max_length=10)
-    skill_slugs: list[str] | None = Field(default=None, max_length=5)
+    skill_slugs: list[str] | None = Field(default=None, max_length=20)
     design_system_slug: str | None = None

@@ -62,6 +62,7 @@ async def lifespan(_: FastAPI):
             "ALTER TABLE design_systems ADD COLUMN IF NOT EXISTS tokens TEXT NOT NULL DEFAULT '{}'",
             "ALTER TABLE generation_jobs ALTER COLUMN status TYPE VARCHAR(32)",
             "ALTER TABLE generation_jobs ADD COLUMN IF NOT EXISTS skill_prompts TEXT",
+            "ALTER TABLE generation_jobs ADD COLUMN IF NOT EXISTS skill_slugs TEXT",
             "ALTER TABLE landing_page_versions ADD COLUMN IF NOT EXISTS validation_errors TEXT",
             "ALTER TABLE landing_page_versions ADD COLUMN IF NOT EXISTS validation_warnings TEXT",
         ):
@@ -105,6 +106,7 @@ async def lifespan(_: FastAPI):
                 await connection.execute(GenerationSkill.__table__.update().where(GenerationSkill.slug == slug).values(**values))
         design_systems = (
             ("minimal-commerce", "Minimal Commerce", "Clean commerce layout with clear hierarchy and focused product conversion.", "Use a restrained neutral palette, one accent color, generous whitespace, crisp cards, clear product hierarchy and a single dominant CTA.", '{"colors":{"background":"#F8FAFC","surface":"#FFFFFF","text":"#0F172A","accent":"#2563EB"},"typography":{"fontFamily":"Inter, sans-serif","headingWeight":800,"bodyWeight":400},"radius":{"card":"16px","button":"12px"},"spacing":{"section":"64px","gap":"16px"}}', "commerce"),
+            ("sales-commerce", "Sales Commerce", "White-background sales page system with a clear green primary purchase action.", "Use a sales-page visual language by default: white background, white surfaces, dark readable text, restrained borders, generous whitespace, product-first hierarchy and one primary green CTA for the real next step. Use #16A34A or a similar accessible green only for the main action, with a darker hover/focus state and visible text label. Do not turn an informational CTA into a purchase CTA. Keep the layout conventional and scannable: product and promise above the fold, benefits, demonstration/gallery, specifications, offer, objections/FAQ, proof and final CTA. Avoid dark backgrounds, neon accents, decorative gradients, excessive rounded cards and editorial experimentation unless the briefing explicitly requires a different brand identity. Preserve accessibility, mobile readability, keyboard focus and reduced motion.", '{"colors":{"background":"#FFFFFF","surface":"#FFFFFF","text":"#111827","muted":"#6B7280","accent":"#16A34A","accentHover":"#15803D","border":"#E5E7EB"},"typography":{"fontFamily":"Inter, sans-serif","headingWeight":800,"bodyWeight":400},"radius":{"card":"12px","button":"10px"},"spacing":{"section":"64px","gap":"20px"}}', "commerce"),
             ("neo-brutalist", "Neo Brutalist", "Bold high-contrast interface with expressive type and strong visual blocks.", "Use high contrast, thick borders, assertive typography, offset shadows and deliberate asymmetry. Keep controls accessible and the CTA obvious.", '{"colors":{"background":"#FFF7ED","surface":"#FFFFFF","text":"#111827","accent":"#F43F5E","border":"#111827"},"typography":{"fontFamily":"Arial, sans-serif","headingWeight":900,"bodyWeight":600},"radius":{"card":"0px","button":"0px"},"spacing":{"section":"48px","gap":"20px"}}', "expressive"),
             ("soft-wellness", "Soft Wellness", "Calm, warm and approachable system for beauty, self-care and lifestyle products.", "Use soft warm neutrals, gentle accent colors, rounded surfaces, comfortable spacing and calm microcopy. Avoid medical claims unless supplied.", '{"colors":{"background":"#FFFDF8","surface":"#FFFFFF","text":"#403A3A","accent":"#C08497","muted":"#8F7A80"},"typography":{"fontFamily":"DM Sans, sans-serif","headingWeight":700,"bodyWeight":400},"radius":{"card":"24px","button":"999px"},"spacing":{"section":"72px","gap":"20px"}}', "wellness"),
             ("dark-cinema", "Dark Cinema", "Immersive dark system for entertainment, gadgets and visual demonstrations.", "Use a dark surface, luminous accent, cinematic contrast, large visual hero and restrained motion. Keep text contrast and reduced-motion behavior accessible.", '{"colors":{"background":"#09090B","surface":"#18181B","text":"#FAFAFA","accent":"#A78BFA","muted":"#A1A1AA"},"typography":{"fontFamily":"Space Grotesk, sans-serif","headingWeight":800,"bodyWeight":400},"radius":{"card":"20px","button":"999px"},"spacing":{"section":"80px","gap":"24px"}}', "entertainment"),
@@ -407,7 +409,7 @@ async def create_generation(
     product.design_system_slug = design_system.slug if design_system else None
     if design_system:
         skill_prompts.append(f"Design system: {design_system.prompt}")
-    job = GenerationJob(product=product, idempotency_key=idempotency_key, status="queued", skill_prompts=json.dumps(skill_prompts))
+    job = GenerationJob(product=product, idempotency_key=idempotency_key, status="queued", skill_prompts=json.dumps(skill_prompts), skill_slugs=json.dumps(request.skill_slugs))
     page = LandingPage(job=job, slug=slug)
     session.add(job)
     session.add(page)
@@ -487,7 +489,7 @@ async def get_briefing(slug: str, user: User = Depends(current_user), session: A
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
     product = page.job.product
-    skill_slugs = []
+    skill_slugs = _json_list(page.job.skill_slugs)
     return BriefingResponse(job_id=page.job.id, status=page.job.status, product_name=product.name, product_description=product.description, target_audience=product.audience, benefits=product.benefits, offer=product.offer, cta=product.cta, language=product.language, market=product.market, tone=product.tone, brand_identity=product.brand_identity, visual_direction=product.visual_direction, reference_urls=_json_list(product.reference_urls), image_urls=_url_list(product.image_urls), skill_slugs=skill_slugs, design_system_slug=product.design_system_slug)
 
 
@@ -513,6 +515,7 @@ async def update_briefing(slug: str, request: BriefingUpdate, user: User = Depen
     if system:
         prompts.append(f"Design system: {system.prompt}")
     page.job.skill_prompts = json.dumps(prompts)
+    page.job.skill_slugs = json.dumps(skill_slugs)
     await session.commit()
     return await get_briefing(slug, user, session)
 
@@ -601,11 +604,11 @@ async def revise_version(slug: str, version_id: UUID, request: RevisionRequest, 
         for item in feedback
     ]
     product = page.job.product
-    skills = _json_list(page.job.skill_prompts)
-    job = GenerationJob(product_id=product.id, status="queued", skill_prompts=json.dumps(skills))
-    session.add(job)
+    job = page.job
+    skills = _json_list(job.skill_prompts)
+    job.status = "queued"
+    job.error_message = None
     await session.commit()
-    await session.refresh(job)
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             response = await client.post(settings.n8n_webhook_url, json={"job_id": str(job.id), "product": _product_payload(product), "feedback": feedback_items, "skills": skills})
